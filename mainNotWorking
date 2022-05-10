@@ -1,0 +1,299 @@
+/**
+ * 
+ */
+package lab03;
+import java.io.*;
+import java.util.*;
+
+/**
+ * @author crystal
+ * Longest Common Subsequence
+ */
+public class lab03driver {
+ static Sequence[] seqList= {};
+ static PWC[] pwcList = {};
+//	static Stack<PWC> pwcStack;
+	static int numPWCs = 0;
+	/**
+	 * @param args
+	 */
+	public static void main(String[] args) throws IOException {	
+		FileWriter outputStream = null;
+		InputStream inpStream = null;
+		Scanner s;
+		int inpStrCount=0;
+//		Stack<Sequence> allSeqsStack = new Stack <Sequence>();
+//		Stack<Sequence> accSeqsStack = new Stack <Sequence>(); // Accessory Sequences Stack, used for iterating thr the stack
+//		pwcStack = new Stack<PWC>();
+//		Stack<PWC> accPWCstack = new Stack <PWC>();
+
+		if(args.length!=2) {
+			System.out.println("Error: Only one input file and one output file allowed");
+			System.exit(1);
+		}
+		try {
+			File outputFile =  new File(args[1]);
+			if (!outputFile.exists()) {
+				outputFile.createNewFile();
+			}
+			outputStream=new FileWriter(args[1]);
+			inpStream=new FileInputStream(args[0]);
+			s=new Scanner(inpStream);
+			System.out.println("Reading input file: "+inpStream);
+			int validInp = 0;
+			int invalidInp = 0;
+
+			while(s.hasNextLine()) {
+				String test = s.nextLine();
+				String[] split = test.split(" = ");
+				System.out.println("[0]:"+split[0]+"\t[1]:"+split[1]);
+				if(split.length>1) {
+					validInp++;
+				} else {
+					invalidInp++;
+				}
+			}
+			inpStream.close();
+			System.out.println("#valid inputs: "+validInp+"\t#invalid inputs: "+invalidInp);
+			Sequence[] allSeqsArray = new Sequence[validInp];
+			if(validInp+invalidInp>0) { //not an empty file
+				inpStream=new FileInputStream(args[0]);
+				s=new Scanner(inpStream);
+				String[] inpStrArr =new String[validInp];
+				String[] strNameArr = new String[validInp];
+				int slot = 0; //slot filled
+				for(int i=0; i<(validInp+invalidInp);i++) {
+					String test = s.nextLine();
+					String[] split = test.split(" = ");  // deliminitor spliting left from right
+					if(split.length==2) {
+						strNameArr[slot]=split[0];
+						inpStrArr[slot]=split[1];
+						System.out.println("string "+strNameArr[slot]+": "+inpStrArr[slot]+"\t\tto slot number: "+slot);
+						Sequence sNo = new Sequence(inpStrArr[slot],strNameArr[slot]);
+						allSeqsArray[slot]=sNo;
+						slot++;
+					}
+				}
+				seqList= new Sequence[slot];
+			}else {
+				System.out.println("Empty file.  Program ending");
+				System.exit(1);
+			}
+			System.out.println("allSeqsArray length: "+allSeqsArray.length);
+
+		
+			//add for loop adding Sequences to seqList using sNo in inpStrArr[slot]
+				// END of reading file input while loop
+			// ----------------------Pairwise comparison start-----------------------//
+			// Step 1: for each strings in the file, prep objects by converting str attributes to char[]
+			System.out.println("seqList length: "+seqList.length);
+			int counter = 0;
+			for(int i=0; i<allSeqsArray.length; i++) {
+				seqList[counter]=prepLCS(allSeqsArray[i]);
+				System.out.println("b: "+seqList[counter].seqStr);
+				counter++;
+				
+			}
+			inpStrCount=counter;
+			// Step 2: for all possible pairwise comparisons; Call int LCS(i,j) for each A[i] and B[j] will return int of matching sequence length
+			Sequence[][] seq2dArray = new Sequence [inpStrCount][inpStrCount];
+System.out.println("inpStrCount: "+inpStrCount);
+int factorial = 1;
+for(int i = 2; i <= inpStrCount-1; i++)
+    factorial *= i;
+int num = (factorial); //=(n-1)!
+pwcList = new PWC[num];
+			for(int i=0; i<inpStrCount; i++) {  // indicates # rows of the adjacency matrix
+				for(int k=0; k<inpStrCount; k++) { // indicates the # columns of the adjacency matrix
+					int j=0;
+					System.out.println("i: "+i+"\tk: "+k+"\tj: "+j);
+					if(i > j) {  // avoid duplicate & self-comparisons
+						PWC pwcNo = calcPairwise(seqList[i],seqList[k]);  // instantiate a PWC object, call will drive the pairwise comparison
+						
+						pwcNo.setNum(numPWCs); //sets PWC obj id#, used for identification purposes in analysis table
+						// Step 3: Compile resultant int[][] matrix C
+						PWC tempPWC =findLongestPath(pwcNo);
+						pwcList[i] = tempPWC;
+						// ------ Pairwise comparison end  ------//
+					}
+					j++;
+				}
+				numPWCs++; 
+				
+			}// The process should iteratively call each possible (n!) combinations of pairs with a distinct <PWC> object	
+
+			// Step 5: Output and summarize results: LCS contents, LCS length, runtime analysis tables
+			//TODO:FileOutput		// file output: iterate file input details, echo input strings	
+			// file output: LCS result(s)
+			System.out.println("------------------PAIRWISE COMPARISON DETAILS------------------");  //for each PWC
+			System.out.println("\n\nNum of PWCs: "+pwcList.length);
+			int j=0;
+			for(int i=0; i<pwcList.length-1; i++) {  // indicates # rows of the adjacency matrix
+				for(int k=0; k<pwcList.length-1; k++) { // indicates the # columns of the adjacency matrix
+					System.out.println("i: "+i+"\tk: "+k+"\tj: "+j);		
+					j++;	
+				
+				if(i > k) { 
+					printPWC(pwcList[i]);
+					System.out.println("i: "+i+"\tk: "+k);
+					k++;
+				}
+				
+				}
+			} 
+				
+			System.out.println("\n\n------------------ALGORITHM ANLAYSIS SUMMARY------------------");  //for each PWC
+			printSummaryTable(pwcList);
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (InputMismatchException e1){ // Catch datatype mismatches (only int allowed)
+			System.out.println("File contains an invalid data type.  Please ensure file contains only integers.");
+			System.exit(1);
+		}
+		finally {
+			inpStream.close();
+			outputStream.flush();
+			outputStream.close();
+		}
+}
+
+	private static void printPWC(PWC pwcNum) {
+		System.out.println("\t\tPWC#: "+pwcNum.pwcIDnum);
+		System.out.println("Sequence "+pwcNum.sequence1.seqID+": "+pwcNum.sequence1.seqStr+"\t");
+		System.out.println("Sequence "+pwcNum.sequence2.seqID+": "+pwcNum.sequence2.seqStr+"\t");
+		System.out.println(pwcNum.sequence1.seqID+" length: "+pwcNum.sequence1.length);
+		System.out.println(pwcNum.sequence2.seqID+" length: "+pwcNum.sequence2.length);
+		System.out.println("\n"+pwcNum.sequence1.seqID+" vs. "+pwcNum.sequence2.seqID+"\tLCS length: "+pwcNum.LCSseq.length);
+		System.out.println("LCS: "+pwcNum.LCSseq.seqStr+"\n\n");
+	}
+
+	private static void printSummaryTable(PWC[] pwcList2) {
+		int numPWCcounter = pwcList2.length;
+		System.out.println("numPWCcounter: "+pwcList2[3]);
+		System.out.println("\t\tPWC id:\t\t"+"LCS result:\t"+"LCS length"+"\tPWC #char comps:\t"+"PWC run time\t"+"PWC String1 length\t"+"PWC String2 length\t");
+		for (int i=0;i<numPWCcounter; i++) {
+			PWC pwcToPrint = pwcList2[i];
+			//TODO:DEBUG			System.out.println("\t"+pwcToPrint.LCSseq.seqStr);
+			System.out.println("\t"+pwcToPrint.pwcIDnum+"\t"+pwcToPrint.sequence1.seqID+" vs. "+pwcToPrint.sequence2.seqID+"\t"+pwcToPrint.LCSseq.length+"\t\t"+pwcToPrint.LCSseq.seqStr.trim().length()+
+					"\t\t"+pwcToPrint.numCharComps+"\t"+pwcToPrint.totRuntime+"\t\t"+pwcToPrint.sequence1.length+"\t\t"+pwcToPrint.sequence2.length);
+		}
+		System.out.println("Number of pairwise comparisons made: "+numPWCcounter);
+	}
+
+	private static PWC findLongestPath(PWC pwcNum) {
+		Sequence seq1 = pwcNum.sequence1;
+		Sequence seq2 = pwcNum.sequence2;
+		int[][] subSeqMatrix = pwcNum.pwcLCSmatrix;
+		System.out.println("TESTING");
+		//while both are indexed >0:
+		int l=-1;
+		char[] s1 = seq1.seqArray;
+		char[] s2 = seq2.seqArray;
+		int cmp=0;
+	//	System.out.println("subSeqMat value");
+		for(int i=s1.length-1; i>=0; i--) {
+			for(int j=s2.length-1; j>=0; j--) {
+	//			System.out.print(" "+subSeqMatrix[i][j]);
+				l=subSeqMatrix[i][j];
+				cmp++;
+			}
+	//		System.out.println();
+		}
+		int a = s1.length-1;
+		int b = s2.length-1;
+
+		char[] LCScharArr = new char[subSeqMatrix[a][b]+1]; //[max(s1.length,s2.length)];
+		int index=LCScharArr.length-1; // works thru the 1d array
+	//	System.out.println("size LCS array: "+subSeqMatrix[s1.length-1][s2.length-1]);
+		while(a>0 && b>0) { 
+			index = subSeqMatrix[a][b];
+			if(s1[a]==s2[b]) {
+	//			System.out.println("a: "+a+"\tindex: "+index);
+				LCScharArr[index] = s1[a];
+				a--;
+				b--;
+				index--;
+			} else if (subSeqMatrix[a-1][b]>subSeqMatrix[a][b-1]) {
+				a--;
+			} else {
+				b--;
+			}
+		}
+		pwcNum.setLCSseq(LCScharArr);
+		for (int i=0; i<LCScharArr.length; i++) {
+	//		System.out.println("LCS: "+LCScharArr[i]);
+		}
+		System.out.println("PWC "+pwcNum.pwcIDnum+"\t Str: "+pwcNum.sequence1.seqStr+"\tStr: "+pwcNum.sequence2.seqStr);
+	//	System.out.println(pwcNum.LCSseq+"\tLCS length: "+pwcNum.LCSseq.length());
+		pwcNum.setCharComp(cmp);
+		return pwcNum;		
+	}
+
+	private static void printArray(char[] lcs, PWC num) {
+		int pwcIDnum=num.pwcIDnum;
+		for (int i=0; i<lcs.length; i++) {
+			System.out.println("LCS: "+lcs[i]);
+			System.out.println("PWC num"+pwcIDnum);
+		}
+	}
+	/**
+	 * Call int LCS(i,j) for each A[i] and B[j] will return int of matching sequence length
+	 * @param seq1
+	 * @param seq2
+	 */
+	private static PWC calcPairwise(Sequence seq1, Sequence seq2) {
+		long startTime = System.nanoTime();
+		int charComp = 0;
+		int[][] LCSarray = new int[seq1.length][seq2.length];
+		for(int i=0; i<seq1.seqArray.length; i++) {
+			for(int j=0; j<seq2.seqArray.length; j++) {
+				LCSarray = LCS(LCSarray, seq1, seq2, i, j); 		// employ dynamic programming technique to compare strings:stringList[], searching for LCS
+				charComp++;
+			}
+		}
+		PWC newPWC = new PWC(LCSarray,seq1,seq2);
+		newPWC.setCharComp(charComp);
+
+		System.out.println("#char comps: "+charComp);
+		long stopTime = System.nanoTime();
+		long timeDiff=stopTime-startTime;
+		newPWC.addRuntime(timeDiff); 
+		return newPWC;	
+	}
+
+	private static Sequence prepLCS(Sequence seqNo) {
+		String x = seqNo.seqStr;
+		char[] X = x.toCharArray(); // convert string to charArray
+		seqNo.setCharArr(X);
+		return seqNo;
+	}
+
+
+	/**
+	 * Pseudocode references CLRS pg.	
+	 * @param sq2 
+	 * @param sq1 
+	 * @param m
+	 * @param n
+	 * @return
+	 */
+	public static int[][] LCS(int[][] lcsMat, Sequence sq1, Sequence sq2, int a, int b) {
+		int[][] c = lcsMat;
+		char m = sq1.seqArray[a];
+		char n = sq2.seqArray[b];
+		if(a==0 || b==0) {	
+			c[a][b]=0;//return 0;
+		} else if (sq1.seqArray[a-1]==sq2.seqArray[b-1]) {//(m==(sq2.seqArray[b]+1)) {
+			c[a][b]=c[a-1][b-1]+1;//c[a][b]=1+c[m][n+1];//return 1+LCS(m+1,n+1);
+		} else {
+			c[a][b]=max(c[a-1][b],c[a][b-1]);//return max(LCS(m+1,n),LCS(m,n+1));
+		}
+		return c;
+	}
+
+	private static int max(int is, int is2) {
+		if(is>=is2) {
+			return is;
+		} else	return is2;
+	}
+}
